@@ -4,19 +4,19 @@
  *
  * @link              http://iconify.it
  * @since             1.0.0
- * @package           My-Gallery
- *
+* @package           My-Gallery
+*
  * @wordpress-plugin
- * Plugin Name:       My Gallery
- * Plugin URI:        http://technify.me
+* Plugin Name:       My Gallery
+* Plugin URI:        http://technify.me
  * Description:       Display a very simple gallery from a list of media IDs.
  * Version:           1.0.0
- * Author:            Scott Lewis
- * Author URI:        http://technify.me
+* Author:            Scott Lewis
+* Author URI:        http://technify.me
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain:       technifyme
- */
+*/
 
 class MyGallery {
 
