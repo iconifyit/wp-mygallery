@@ -4,21 +4,23 @@
  *
  * @link              http://iconify.it
  * @since             1.0.0
-* @package           My-Gallery
-*
+ * @package           My-Gallery
+ *
  * @wordpress-plugin
-* Plugin Name:       My Gallery
-* Plugin URI:        http://technify.me
+ * Plugin Name:       My Gallery
+ * Plugin URI:        http://technify.me
  * Description:       Display a very simple gallery from a list of media IDs.
  * Version:           1.0.0
-* Author:            Scott Lewis
-* Author URI:        http://technify.me
+ * Author:            Scott Lewis
+ * Author URI:        http://technify.me
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain:       technifyme
-*/
+ */
 
 class MyGallery {
+	
+	private static $current_url;
 
     /**
      * Do some WP cleanup.
@@ -67,14 +69,23 @@ class MyGallery {
      * Handle the gallery shortcode
      */
     public static function shortcode( $attrs ) {
+	    
+	    global $wp;
+	    
+	    self::$current_url = home_url( $wp->request );
+	    
+	    $shortcode_attrs = $attrs;
 
         ob_start();
+
         $attrs = shortcode_atts(
-            array('ids' => array(), 'size' => 'medium'),
+            array( 'ids' => array(), 'size' => 'medium', 'columns' => '8' ),
             $attrs
         );
+        
+        $columns = self::get( $attrs, 'columns', 8 );
 
-        $class = self::get( $attrs, 'size', 'medium' );
+        $class = str_replace('"', '', self::get( $attrs, 'size', 'medium' ));
 
         $the_query = new WP_Query(array(
             'post_type'      => array( 'attachment' ),
@@ -85,6 +96,7 @@ class MyGallery {
             'order'          => 'asc'
         ));
         ?>
+        <?php $iter = 0; ?>
         <?php if ($the_query->have_posts()) : ?>
             <ul class="inline-gallery <?php echo $class; ?>">
                 <?php while($the_query->have_posts()) : $the_query->the_post() ; ?>
@@ -101,8 +113,19 @@ class MyGallery {
                         $alt_sentence = self::to_sentence( 'icon', $alt_text );
                         $alt_text = self::oxfordize( $alt_text );
                     }
+                    $img_src = str_replace('https://diversityavatars.com', 'https://cdn.diversityavatars.com', get_the_guid());
                     ?>
-                    <li><img src="<?php the_guid(); ?>" title="<?php echo $alt_sentence; ?>" alt="<?php echo $alt_sentence; ?>" /></li>
+                    <li id="icon-<?php echo get_the_ID(); ?>">
+                    	<img src="<?php echo $img_src; ?>" 
+                    		 title="<?php echo $alt_sentence; ?>" 
+                    		 alt="<?php echo $alt_sentence; ?>" 
+                    		 />
+                    </li>
+                    <?php if ( ++$iter % $columns == 0 ) : ?>
+            		    </ul>
+                        <ul class="inline-gallery <?php echo $class; ?>">
+                    <?php endif; ?>
+                    <?php # $iter++; ?>
                 <?php endwhile; ?>
             </ul>
         <?php endif; ?>
@@ -110,6 +133,9 @@ class MyGallery {
         $gallery = ob_get_contents();
         ob_end_clean();
         wp_reset_postdata();
+        
+        self::make_sitemap($shortcode_attrs);
+        
         return $gallery;
     }
 
@@ -222,6 +248,87 @@ class MyGallery {
          * of which the Queen herself would be proud.
          */
         return trim( "{$first} {$and} {$last}" );
+    }
+    
+    /**
+     * Create sitemap if it does not already exist.
+     */
+    public static function make_sitemap( $attrs ) {
+	    
+	    $pagename = get_page_template();
+	    
+	    $sitemap_path = ABSPATH . "{$pagename}-images.xml";
+	    
+	    if (file_exists($sitemap_path)) return;
+	    
+		try {
+			ob_start();
+	        $attrs = shortcode_atts(
+	            array('ids' => array(), 'size' => 'medium'),
+	            $attrs
+	        );
+	
+	        $class = str_replace('"', '', self::get( $attrs, 'size', 'medium' ));
+	
+	        $the_query = new WP_Query(array(
+	            'post_type'      => array( 'attachment' ),
+	            'post__in'       => @explode(',', $attrs['ids']),
+	            'posts_per_page' => -1,
+	            'post_status'    => 'inherit',
+	            'post_mime_type' => 'image',
+	            'order'          => 'asc'
+	        ));
+	    ?>
+	    <?php if ($the_query->have_posts()) : ?>
+	<?php echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n"; ?>
+	<?php echo '<?xml-stylesheet type="text/xsl" href="https://diversityavatars.com/image-sitemap.xsl"?>' . "\n"; ?>
+	<?php echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:image="http:/www.google.com/schemas/sitemap-image/1.1" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">' . "\n"; ?>	
+			<?php while($the_query->have_posts()) : $the_query->the_post() ; ?>
+		        <?php
+			        $alt_sentence = "";
+			        $alt_text = get_post_meta( get_the_ID(), '_wp_attachment_image_alt', true );
+			        if (empty($alt_text)) {
+			            $alt_text = get_the_title( get_the_ID() );
+			        }
+			        if (empty($alt_text)) {
+			            $alt_text = pathinfo( basename(get_the_guid()), PATHINFO_FILENAME );
+			        }
+			        if (! empty($alt_text)) {
+			            $alt_sentence = self::to_sentence( 'icon', $alt_text );
+			            $alt_text = self::oxfordize( $alt_text );
+			        }
+			        $img_src = str_replace('https://diversityavatars.com', 'https://cdn.diversityavatars.com', get_the_guid());
+			        
+			        // $image_page = get_permalink( $the_query->the_post()->post_parent );
+			        $image_page = self::$current_url;
+		        ?>
+	        <url>
+				<loc><?php echo $image_page; ?></loc>
+				<lastmod><?php echo date('c', time()); ?></lastmod>
+				<image:image>
+					<image:loc><?php echo $img_src; ?></image:loc>
+					<image:title><?php echo $alt_sentence; ?></image:title>
+					<image:caption/>
+				</image:image>
+		    </url>	
+			<?php endwhile; ?>
+		<?php echo '</urlset>' . "\n"; ?>
+	    <?php endif; ?>    
+	    <?php
+	        $sitemap_xml = ob_get_contents();
+	        ob_end_clean();
+	        wp_reset_postdata();
+	        
+	        // echo '<!-- MYGALLERY SITEMAP : ' . $sitemap_path . ' -->';
+	        
+	        if (! empty($sitemap_xml)) {
+		        // write to web root
+		        file_put_contents($sitemap_path, trim($sitemap_xml));
+	        }			
+		}		
+		catch( Exception $e) {
+			// echo '<!-- MYGALLERY SITEMAP ERROR : ' . $e->getMessage() . ' -->';
+		}
     }
 }
 
