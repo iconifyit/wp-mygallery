@@ -2,17 +2,17 @@
 /**
  * Create a very simple gallery from a list of media IDs.
  *
- * @link              http://iconify.it
+ * @link              https://atomiclotus.net
  * @since             1.0.0
  * @package           My-Gallery
  *
  * @wordpress-plugin
  * Plugin Name:       My Gallery
- * Plugin URI:        http://technify.me
+ * Plugin URI:        https://atomiclotus.net
  * Description:       Display a very simple gallery from a list of media IDs.
  * Version:           1.0.0
  * Author:            Scott Lewis
- * Author URI:        http://technify.me
+ * Author URI:        https://atomiclotus.net
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain:       technifyme
